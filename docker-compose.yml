@@ -1,0 +1,42 @@
+services:
+  # Nuestra base de datos para que n8n guarde sus flujos
+  postgres:
+    image: postgres:16-alpine
+    container_name: postgres_db
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./postgres_data:/var/lib/postgresql/data
+
+  # El gestor de colas para tus proyectos DevOps
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: rabbitmq_dev
+    restart: always
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+
+  # La joya de la corona: n8n
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: n8n_app
+    restart: always
+    ports:
+      - "5678:5678"
+    environment:
+      - DB_TYPE=${N8N_DB_TYPE}
+      - DB_POSTGRESDB_HOST=${N8N_DB_HOST}
+      - DB_POSTGRESDB_PORT=${N8N_DB_PORT}
+      - DB_POSTGRESDB_DATABASE=${POSTGRES_DB}
+      - DB_POSTGRESDB_USER=${POSTGRES_USER}
+      - DB_POSTGRESDB_PASSWORD=${POSTGRES_PASSWORD}
+    depends_on:
+      - postgres
+    volumes:
+      - ./n8n_data:/home/node/.n8n

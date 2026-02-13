@@ -1,0 +1,24 @@
+# === Secretos y Configuración Local ===
+# Este es el más importante: nunca subas tus credenciales reales
+.env
+.env.local
+.env.*.local
+
+# === Docker ===
+# Ignora archivos de datos de contenedores si los guardas en carpetas locales
+# (Evita subir bases de datos enteras a GitHub)
+postgres_data/
+mysql_data/
+mongo_data/
+
+# === Archivos temporales de Docker ===
+.docker/
+*.tar
+*.tar.gz
+
+# === Archivos de Sistema y Editores ===
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.log
