@@ -13,14 +13,21 @@ services:
     volumes:
       - ./postgres_data:/var/lib/postgresql/data
 
-  # El gestor de colas para tus proyectos DevOps
+# El gestor de colas para tus proyectos DevOps
   rabbitmq:
     image: rabbitmq:3-management-alpine
     container_name: rabbitmq_dev
     restart: always
+    environment:
+      # Inyectamos el usuario y contraseña desde nuestro .env
+      RABBITMQ_DEFAULT_USER: ${RABBIT_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBIT_PASSWORD}
+      RABBITMQ_NODENAME: ${RABBIT_NODENAME}
     ports:
-      - "5672:5672"
-      - "15672:15672"
+      - "5672:5672"   # Puerto de datos (AMQP)
+      - "15672:15672" # Puerto del Dashboard (Web UI)
+    volumes:
+      - ./rabbitmq_data:/var/lib/rabbitmq # Para que no pierdas usuarios si reinicias
 
   # La joya de la corona: n8n
   n8n:
