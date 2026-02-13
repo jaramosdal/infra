@@ -8,8 +8,8 @@
 # Ignora archivos de datos de contenedores si los guardas en carpetas locales
 # (Evita subir bases de datos enteras a GitHub)
 postgres_data/
-mysql_data/
-mongo_data/
+rabbitmq_data/
+n8n_data/
 
 # === Archivos temporales de Docker ===
 .docker/
