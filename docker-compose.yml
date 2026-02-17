@@ -48,3 +48,13 @@ services:
       - postgres
     volumes:
       - ./n8n_data:/home/node/.n8n
+
+  moltbot:
+    build: ./moltbot  # Docker buscará el Dockerfile en esa carpeta
+    container_name: moltbot_app
+    restart: always
+    environment:
+      - RABBIT_USER=${RABBIT_USER}
+      - RABBIT_PASSWORD=${RABBIT_PASSWORD}
+    depends_on:
+      - rabbitmq
