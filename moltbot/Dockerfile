@@ -1,12 +1,13 @@
 FROM python:3.11-slim
 
+# Necesario para que psycopg2 compile en linux slim
+RUN apt-get update && apt-get install -y libpq-dev gcc && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /app
 
-# Instalamos la librería para RabbitMQ
-RUN pip install pika
+# Instalamos pika (RabbitMQ) y psycopg2 (Postgres)
+RUN pip install pika psycopg2-binary
 
-# Copiamos el código
 COPY app.py .
 
-# Por esto (el flag -u significa "unbuffered"):
 CMD ["python", "-u", "app.py"]
