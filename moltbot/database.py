@@ -34,7 +34,7 @@ def setup_db():
         """
         CREATE TABLE IF NOT EXISTS moltbot.logs_infraestructura (
             id SERIAL PRIMARY KEY,
-            servicio VARCHAR(50) NOT NULL UNIQUE,
+            servicio VARCHAR(50) NOT NULL,
             estado VARCHAR(20) NOT NULL,
             fecha TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
