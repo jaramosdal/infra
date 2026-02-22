@@ -1,13 +1,20 @@
 FROM python:3.11-slim
 
-# Necesario para que psycopg2 compile en linux slim
-RUN apt-get update && apt-get install -y libpq-dev gcc && rm -rf /var/lib/apt/lists/*
+# Instalamos dependencias del sistema para psycopg2
+RUN apt-get update && apt-get install -y \
+    libpq-dev \
+    gcc \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-# Instalamos pika (RabbitMQ) y psycopg2 (Postgres)
-RUN pip install pika psycopg2-binary
+# 1. Copiamos PRIMERO el archivo de requerimientos
+COPY requirements.txt .
 
-COPY app.py .
+# 2. Instalamos las librerías de Python
+RUN pip install --no-cache-dir -r requirements.txt
+
+# 3. Copiamos el resto del código
+COPY . .
 
 CMD ["python", "-u", "app.py"]

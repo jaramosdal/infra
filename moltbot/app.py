@@ -1,78 +1,57 @@
 import pika
 import os
-import time
-import psycopg2
+import json
+from database import setup_db, insert_factura, get_n8n_execution_count
+from processors.bill_parser import extraer_importe_iberdrola
+from utils.discord_bot import enviar_notificacion_factura
 
-# Variables de entorno
-RABBIT_HOST = 'rabbitmq'
-POSTGRES_HOST = 'postgres'
-POSTGRES_DB = os.getenv('POSTGRES_DB', 'n8n')
-POSTGRES_USER = os.getenv('POSTGRES_USER', 'n8n_user')
-POSTGRES_PASSWORD = os.getenv('POSTGRES_PASSWORD', 'n8n_password')
+# Inicializamos la base de datos
+setup_db()
 
-def get_db_count():
-    try:
-        conn = psycopg2.connect(
-            host=POSTGRES_HOST,
-            database=POSTGRES_DB,
-            user=POSTGRES_USER,
-            password=POSTGRES_PASSWORD
-        )
-        cur = conn.cursor()
-        cur.execute("SELECT count(*) FROM execution_entity;")
-        count = cur.fetchone()[0]
-        cur.close()
-        conn.close()
-        return count
-    except Exception as e:
-        return f"Error DB: {e}"
-
-# Sacamos los datos de conexión de las variables de entorno
-user = os.getenv('RABBIT_USER', 'guest')
-password = os.getenv('RABBIT_PASSWORD', 'guest')
-host = 'rabbitmq' # Nombre del servicio en docker-compose
-
-print("🤖 Moltbot está despertando...")
-
-def conectar():
-    while True:
-        try:
-            credentials = pika.PlainCredentials(user, password)
-            connection = pika.BlockingConnection(
-                pika.ConnectionParameters(host=host, credentials=credentials)
-            )
-            return connection
-        except Exception as e:
-            print(f"❌ Error conectando a RabbitMQ: {e}. Reintentando en 5s...")
-            time.sleep(5)
-
-connection = conectar()
+# Configuración RabbitMQ
+RABBIT_USER = os.getenv('RABBIT_USER', 'guest')
+RABBIT_PASS = os.getenv('RABBIT_PASSWORD', 'guest')
+credentials = pika.PlainCredentials(RABBIT_USER, RABBIT_PASS)
+connection = pika.BlockingConnection(pika.ConnectionParameters(host='rabbitmq', credentials=credentials))
 channel = connection.channel()
 
-# Creamos las colas llamadas 'comandos_bot' y 'respuestas_bot'
+# Declaramos colas
 channel.queue_declare(queue='comandos_bot')
-channel.queue_declare(queue='respuestas_bot')
+channel.queue_declare(queue='tareas_facturas') 
 
-def callback(ch, method, properties, body):
+def callback_comandos(ch, method, properties, body):
     comando = body.decode()
-    print(f"📩 Comando recibido: {comando}")
-    
     if comando == "status_db":
-        total = get_db_count()
-        respuesta = f"📊 Reporte del sistema: Se han detectado {total} ejecuciones en la base de datos de n8n."
+        total = get_n8n_execution_count()
+        print(f"📊 Status DB: {total} ejecuciones")
+        # Aquí enviarías la respuesta de vuelta...
+
+def callback_facturas(ch, method, properties, body):
+    try:
+        # n8n envía un JSON con el texto del PDF
+        datos = json.loads(body)
+        texto_pdf = datos.get('text', '')
         
-        # Enviamos la respuesta de vuelta a RabbitMQ
-        ch.basic_publish(
-            exchange='',
-            routing_key='respuestas_bot', # Nueva cola
-            body=respuesta
-        )
-        print(f"✅ Respuesta enviada a la cola 'respuestas_bot'")
-    else:
-        print(f"❓ Comando desconocido")
+        # Usamos el procesador modular
+        importe = extraer_importe_iberdrola(texto_pdf)
+        
+        if importe:
+            # 1. Guardar en DB
+            id_db = insert_factura(proveedor="Iberdrola", importe=importe, texto=texto_pdf[:500])
+            
+            # 2. Avisar a Discord
+            enviar_notificacion_factura("Iberdrola", importe)
 
-# Le decimos a RabbitMQ que queremos escuchar la cola
-channel.basic_consume(queue='comandos_bot', on_message_callback=callback, auto_ack=True)
+            print(f"✅ Factura guardada: {importe}€ (ID: {id_db})")
+        else:
+            print("⚠️ No se pudo extraer el importe del texto recibido")
+            
+    except Exception as e:
+        print(f"❌ Error procesando factura: {e}")
 
-print('🚀 Moltbot está listo y escuchando en la cola [comandos_bot].')
+# Escuchamos ambas colas
+channel.basic_consume(queue='comandos_bot', on_message_callback=callback_comandos, auto_ack=True)
+channel.basic_consume(queue='tareas_facturas', on_message_callback=callback_facturas, auto_ack=True)
+
+print('🚀 Moltbot listo. Escuchando comandos y facturas...')
 channel.start_consuming()

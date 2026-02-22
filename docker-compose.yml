@@ -59,5 +59,6 @@ services:
       - POSTGRES_DB=${POSTGRES_DB}
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD} # La que usa n8n para conectarse a la base de datos
+      - DISCORD_WEBHOOK_URL_FACTURAS=${DISCORD_WEBHOOK_URL_FACTURAS}
     depends_on:
       - rabbitmq
