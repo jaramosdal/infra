@@ -1,8 +1,8 @@
 import json
 import os
-from database import get_connection
+from database import get_workflows
 
-def backup_n8n_workflows(output_folder="/infra/n8n-workflows"):
+def backup_n8n_workflows(output_folder="/n8n-workflows"):
     """
     Lee los flujos de la tabla de n8n y los guarda como archivos .json
     """
@@ -10,29 +10,25 @@ def backup_n8n_workflows(output_folder="/infra/n8n-workflows"):
     if not os.path.exists(output_folder):
         os.makedirs(output_folder, exist_ok=True)
 
-    query = "SELECT name, nodes, connections FROM workflow_entity;"
-    
     try:
-        with get_connection() as conn:
-            with conn.cursor() as cur:
-                cur.execute(query)
-                workflows = cur.fetchall()
+        workflows = get_workflows()
+        
+        if workflows:
+            for name, nodes, connections in workflows:
+                # Limpiar el nombre para que sea un nombre de archivo válido
+                filename = "".join([c for c in name if c.isalnum() or c in (' ', '_')]).strip().replace(' ', '_')
+                path = f"{output_folder}/{filename}.json"
                 
-                for name, nodes, connections in workflows:
-                    # Limpiar el nombre para que sea un nombre de archivo válido
-                    filename = "".join([c for c in name if c.isalnum() or c in (' ', '_')]).strip().replace(' ', '_')
-                    path = f"{output_folder}/{filename}.json"
-                    
-                    workflow_data = {
-                        "name": name,
-                        "nodes": nodes,
-                        "connections": connections
-                    }
-                    
-                    with open(path, "w", encoding="utf-8") as f:
-                        json.dump(workflow_data, f, indent=4, ensure_ascii=False)
+                workflow_data = {
+                    "name": name,
+                    "nodes": nodes,
+                    "connections": connections
+                }
                 
-                return len(workflows)
+                with open(path, "w", encoding="utf-8") as f:
+                    json.dump(workflow_data, f, indent=4, ensure_ascii=False)
+            
+            return len(workflows)
     except Exception as e:
         print(f"❌ Error en backup de workflows: {e}")
         return None

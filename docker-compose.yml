@@ -63,4 +63,4 @@ services:
     depends_on:
       - rabbitmq
     volumes:
-      - ./n8n-workflows:/infra/n8n-workflows  # <--- MAPEO DEL BACKUP
+      - ./n8n-workflows:/n8n-workflows  # <--- MAPEO DEL BACKUP

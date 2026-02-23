@@ -8,7 +8,7 @@ POSTGRES_DB = os.getenv('POSTGRES_DB', 'n8n')
 POSTGRES_USER = os.getenv('POSTGRES_USER', 'n8n_user')
 POSTGRES_PASSWORD = os.getenv('POSTGRES_PASSWORD', 'n8n_password')
 
-def get_connection():
+def _get_connection():
     return psycopg2.connect(
         host=POSTGRES_HOST,
         database=POSTGRES_DB,
@@ -41,7 +41,7 @@ def setup_db():
         """
     ]
     try:
-        with get_connection() as conn:
+        with _get_connection() as conn:
             with conn.cursor() as cur:
                 for q in queries:
                     cur.execute(q)
@@ -60,7 +60,7 @@ def insert_factura(proveedor, importe, texto=""):
         # Limpiamos el importe: cambiamos comas por puntos si vienen del PDF
         importe_clean = float(str(importe).replace(',', '.'))
         
-        with get_connection() as conn:
+        with _get_connection() as conn:
             with conn.cursor() as cur:
                 cur.execute(query, (proveedor, importe_clean, texto))
                 factura_id = cur.fetchone()[0]
@@ -73,7 +73,7 @@ def insert_factura(proveedor, importe, texto=""):
 def get_n8n_execution_count():
     """Tu consulta original de n8n"""
     try:
-        with get_connection() as conn:
+        with _get_connection() as conn:
             with conn.cursor() as cur:
                 cur.execute("SELECT count(*) FROM execution_entity;")
                 return cur.fetchone()[0]
@@ -89,11 +89,23 @@ def get_total_gastos_mes():
     WHERE date_trunc('month', fecha_registro) = date_trunc('month', CURRENT_DATE);
     """
     try:
-        with get_connection() as conn:
+        with _get_connection() as conn:
             with conn.cursor() as cur:
                 cur.execute(query)
                 total = cur.fetchone()[0]
                 return float(total) if total else 0.0
     except Exception as e:
         print(f"❌ Error consultando gastos: {e}")
+        return None
+
+def get_workflows():
+    """Obtiene todos los workflows de n8n"""
+    query = "SELECT name, nodes, connections FROM workflow_entity;"
+    try:
+        with _get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(query)
+                return cur.fetchall()
+    except Exception as e:
+        print(f"❌ Error obteniendo workflows: {e}")
         return None
