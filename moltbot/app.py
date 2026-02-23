@@ -1,7 +1,8 @@
 import pika
 import os
 import json
-from database import setup_db, insert_factura, get_n8n_execution_count
+from database import setup_db, insert_factura, get_n8n_execution_count, get_total_gastos_mes
+from processors.backup_manager import backup_n8n_workflows
 from processors.bill_parser import extraer_importe_iberdrola
 from utils.discord_bot import enviar_notificacion_factura
 
@@ -18,13 +19,6 @@ channel = connection.channel()
 # Declaramos colas
 channel.queue_declare(queue='comandos_bot')
 channel.queue_declare(queue='tareas_facturas') 
-
-def callback_comandos(ch, method, properties, body):
-    comando = body.decode()
-    if comando == "status_db":
-        total = get_n8n_execution_count()
-        print(f"📊 Status DB: {total} ejecuciones")
-        # Aquí enviarías la respuesta de vuelta...
 
 def callback_facturas(ch, method, properties, body):
     try:
@@ -48,6 +42,39 @@ def callback_facturas(ch, method, properties, body):
             
     except Exception as e:
         print(f"❌ Error procesando factura: {e}")
+
+        from database import get_total_gastos_mes # Añade este import
+
+def callback_comandos(ch, method, properties, body):
+    comando = body.decode().lower().strip()
+    print(f"📩 Comando recibido: {comando}")
+    
+    if comando == "!gastos":
+        total = get_total_gastos_mes()
+        if total is not None:
+            respuesta = f"💸 **Resumen de gastos de este mes:** {total:,.2f} €"
+        else:
+            respuesta = "⚠️ Hubo un error al consultar la base de datos."
+    elif comando == "status_db":
+        total = get_n8n_execution_count()
+        respuesta = f"📊 Status DB: {total} ejecuciones"  
+    elif comando == "backup_workflows":
+        print("💾 Iniciando backup de flujos n8n...")
+        cantidad = backup_n8n_workflows()
+        
+        if cantidad is not None:
+            respuesta = f"📦 Backup completado: {cantidad} flujos guardados en /infra/n8n-workflows"
+        else:
+            respuesta = "⚠️ Error al realizar el backup de flujos."
+
+    # Enviamos la respuesta a la cola de Discord
+    ch.basic_publish(
+        exchange='',
+        routing_key='respuestas_bot',
+        body=respuesta
+    )
+
+    print(f"✅ Respuesta enviada: {respuesta}")
 
 # Escuchamos ambas colas
 channel.basic_consume(queue='comandos_bot', on_message_callback=callback_comandos, auto_ack=True)

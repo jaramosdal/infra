@@ -80,3 +80,20 @@ def get_n8n_execution_count():
     except Exception as e:
         print(f"❌ Error DB: {e}")
         return "Error"
+    
+def get_total_gastos_mes():
+    """Suma todos los importes del mes actual"""
+    query = """
+    SELECT SUM(importe) 
+    FROM moltbot.facturas_gastos 
+    WHERE date_trunc('month', fecha_registro) = date_trunc('month', CURRENT_DATE);
+    """
+    try:
+        with get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(query)
+                total = cur.fetchone()[0]
+                return float(total) if total else 0.0
+    except Exception as e:
+        print(f"❌ Error consultando gastos: {e}")
+        return None

@@ -62,3 +62,5 @@ services:
       - DISCORD_WEBHOOK_URL_FACTURAS=${DISCORD_WEBHOOK_URL_FACTURAS}
     depends_on:
       - rabbitmq
+    volumes:
+      - ./n8n-workflows:/infra/n8n-workflows  # <--- MAPEO DEL BACKUP

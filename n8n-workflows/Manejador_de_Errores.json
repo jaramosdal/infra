@@ -1,0 +1,51 @@
+{
+    "name": "Manejador de Errores",
+    "nodes": [
+        {
+            "parameters": {},
+            "type": "n8n-nodes-base.errorTrigger",
+            "typeVersion": 1,
+            "position": [
+                -144,
+                -128
+            ],
+            "id": "c4457b12-eb31-4ef0-9173-d92bc5ad8a0b",
+            "name": "Error Trigger"
+        },
+        {
+            "parameters": {
+                "authentication": "webhook",
+                "content": "=🚨 **Error en el Sistema de Automatización** 🚨\n\n**Flujo:** `{{ $json.workflow.name }}`\n**ID del Flujo:** `{{ $json.workflow.id }}`\n**Mensaje de Error:** > {{ $json.execution.error.message }}\n\n**Hora:** {{ $json.execution.lastNodeExecuted }}\n[Ver Ejecución]({{ $json.execution.url }})",
+                "options": {}
+            },
+            "type": "n8n-nodes-base.discord",
+            "typeVersion": 2,
+            "position": [
+                64,
+                -128
+            ],
+            "id": "3e0a8a76-ab47-4db6-a28a-dab93a406303",
+            "name": "Discord",
+            "webhookId": "1cfb704e-8b1a-46c2-81a0-df58fdd16cf0",
+            "credentials": {
+                "discordWebhookApi": {
+                    "id": "4xU8vTms95p6bUoB",
+                    "name": "Discord Webhook account"
+                }
+            }
+        }
+    ],
+    "connections": {
+        "Error Trigger": {
+            "main": [
+                [
+                    {
+                        "node": "Discord",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    }
+}

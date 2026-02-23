@@ -1,0 +1,47 @@
+{
+    "name": "MCP gatitos",
+    "nodes": [
+        {
+            "parameters": {
+                "path": "65374ad6-4e30-4a00-8aab-393da91b6732"
+            },
+            "type": "@n8n/n8n-nodes-langchain.mcpTrigger",
+            "typeVersion": 2,
+            "position": [
+                -160,
+                -352
+            ],
+            "id": "28b169e7-08a2-40c9-8801-1cf1626099c5",
+            "name": "MCP Server Trigger",
+            "webhookId": "65374ad6-4e30-4a00-8aab-393da91b6732"
+        },
+        {
+            "parameters": {
+                "toolDescription": "Hace una llamada HTTP a la API de Catfact devolviendo un dato aleatorio de los gatos.",
+                "url": "https://catfact.ninja/fact",
+                "options": {}
+            },
+            "type": "n8n-nodes-base.httpRequestTool",
+            "typeVersion": 4.4,
+            "position": [
+                128,
+                -128
+            ],
+            "id": "16f50cf3-aed7-41de-b036-cf40e4f2af65",
+            "name": "HTTP Request"
+        }
+    ],
+    "connections": {
+        "HTTP Request": {
+            "ai_tool": [
+                [
+                    {
+                        "node": "MCP Server Trigger",
+                        "type": "ai_tool",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    }
+}

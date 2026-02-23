@@ -1,0 +1,60 @@
+{
+    "name": "Send executions to Discord",
+    "nodes": [
+        {
+            "parameters": {
+                "queue": "respuestas_bot",
+                "options": {}
+            },
+            "type": "n8n-nodes-base.rabbitmqTrigger",
+            "typeVersion": 1,
+            "position": [
+                -288,
+                -112
+            ],
+            "id": "b654c0a4-1d98-4b50-aa8b-5412b35dbd56",
+            "name": "RabbitMQ Trigger",
+            "credentials": {
+                "rabbitmq": {
+                    "id": "VvAOaGKnWq2ebqwD",
+                    "name": "RabbitMQ account"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "authentication": "webhook",
+                "content": "={{ $json.content }}",
+                "options": {}
+            },
+            "type": "n8n-nodes-base.discord",
+            "typeVersion": 2,
+            "position": [
+                -80,
+                -112
+            ],
+            "id": "1a5a6de7-63a1-4db4-ae0b-d78fc9c086f3",
+            "name": "Discord",
+            "webhookId": "ec7829b7-9176-4225-9e49-0fd345d7950a",
+            "credentials": {
+                "discordWebhookApi": {
+                    "id": "4xU8vTms95p6bUoB",
+                    "name": "Discord Webhook account"
+                }
+            }
+        }
+    ],
+    "connections": {
+        "RabbitMQ Trigger": {
+            "main": [
+                [
+                    {
+                        "node": "Discord",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    }
+}

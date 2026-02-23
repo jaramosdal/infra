@@ -1,0 +1,51 @@
+{
+    "name": "Bot request",
+    "nodes": [
+        {
+            "parameters": {
+                "queue": "comandos_bot",
+                "sendInputData": false,
+                "message": "status_db",
+                "options": {}
+            },
+            "type": "n8n-nodes-base.rabbitmq",
+            "typeVersion": 1.1,
+            "position": [
+                -160,
+                -112
+            ],
+            "id": "7441dd0a-86ab-4abb-83f9-970c4b5870eb",
+            "name": "RabbitMQ",
+            "credentials": {
+                "rabbitmq": {
+                    "id": "VvAOaGKnWq2ebqwD",
+                    "name": "RabbitMQ account"
+                }
+            }
+        },
+        {
+            "parameters": {},
+            "type": "n8n-nodes-base.manualTrigger",
+            "typeVersion": 1,
+            "position": [
+                -368,
+                -112
+            ],
+            "id": "0dabfccf-3ed5-4b37-852a-403036dd1cfe",
+            "name": "When clicking ‘Execute workflow’"
+        }
+    ],
+    "connections": {
+        "When clicking ‘Execute workflow’": {
+            "main": [
+                [
+                    {
+                        "node": "RabbitMQ",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    }
+}

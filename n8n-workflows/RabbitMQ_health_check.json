@@ -1,0 +1,319 @@
+{
+    "name": "RabbitMQ health check",
+    "nodes": [
+        {
+            "parameters": {
+                "rule": {
+                    "interval": [
+                        {
+                            "field": "hours"
+                        }
+                    ]
+                }
+            },
+            "type": "n8n-nodes-base.scheduleTrigger",
+            "typeVersion": 1.3,
+            "position": [
+                -416,
+                -96
+            ],
+            "id": "5ac7795e-7f74-4d87-9f8f-d1bb5e9d90a1",
+            "name": "Schedule Trigger"
+        },
+        {
+            "parameters": {
+                "url": "http://rabbitmq:15672/api/health/checks/alarms",
+                "authentication": "genericCredentialType",
+                "genericAuthType": "httpBasicAuth",
+                "options": {}
+            },
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.4,
+            "position": [
+                -208,
+                -96
+            ],
+            "id": "3bdae868-ca58-46e5-a2bd-f01617c3111a",
+            "name": "HTTP Request",
+            "credentials": {
+                "httpBasicAuth": {
+                    "id": "lKptTVtaCnhL7PVl",
+                    "name": "RabbitMQ API"
+                },
+                "httpBearerAuth": {
+                    "id": "4a23PGZjFrg5sbYx",
+                    "name": "Bearer Auth account"
+                }
+            },
+            "onError": "continueRegularOutput"
+        },
+        {
+            "parameters": {
+                "conditions": {
+                    "options": {
+                        "caseSensitive": true,
+                        "leftValue": "",
+                        "typeValidation": "strict",
+                        "version": 3
+                    },
+                    "conditions": [
+                        {
+                            "id": "a5441538-81ff-4228-9ac8-cc2c0e15cf68",
+                            "leftValue": "={{ $json.status }}",
+                            "rightValue": "ok",
+                            "operator": {
+                                "type": "string",
+                                "operation": "equals"
+                            }
+                        }
+                    ],
+                    "combinator": "and"
+                },
+                "options": {}
+            },
+            "type": "n8n-nodes-base.if",
+            "typeVersion": 2.3,
+            "position": [
+                0,
+                -96
+            ],
+            "id": "db434f3f-36d7-4e64-90c7-b51025d41075",
+            "name": "If"
+        },
+        {
+            "parameters": {
+                "schema": {
+                    "__rl": true,
+                    "value": "moltbot",
+                    "mode": "list",
+                    "cachedResultName": "moltbot"
+                },
+                "table": {
+                    "__rl": true,
+                    "value": "logs_infraestructura",
+                    "mode": "list",
+                    "cachedResultName": "logs_infraestructura"
+                },
+                "columns": {
+                    "mappingMode": "defineBelow",
+                    "value": {
+                        "servicio": "RabbitMQ",
+                        "estado": "Online"
+                    },
+                    "matchingColumns": [
+                        "id"
+                    ],
+                    "schema": [
+                        {
+                            "id": "id",
+                            "displayName": "id",
+                            "required": false,
+                            "defaultMatch": true,
+                            "display": true,
+                            "type": "number",
+                            "canBeUsedToMatch": true,
+                            "removed": true
+                        },
+                        {
+                            "id": "servicio",
+                            "displayName": "servicio",
+                            "required": false,
+                            "defaultMatch": false,
+                            "display": true,
+                            "type": "string",
+                            "canBeUsedToMatch": true
+                        },
+                        {
+                            "id": "estado",
+                            "displayName": "estado",
+                            "required": false,
+                            "defaultMatch": false,
+                            "display": true,
+                            "type": "string",
+                            "canBeUsedToMatch": true
+                        },
+                        {
+                            "id": "fecha",
+                            "displayName": "fecha",
+                            "required": false,
+                            "defaultMatch": false,
+                            "display": true,
+                            "type": "dateTime",
+                            "canBeUsedToMatch": true,
+                            "removed": true
+                        }
+                    ],
+                    "attemptToConvertTypes": false,
+                    "convertFieldsToString": false
+                },
+                "options": {}
+            },
+            "type": "n8n-nodes-base.postgres",
+            "typeVersion": 2.6,
+            "position": [
+                208,
+                -192
+            ],
+            "id": "598298df-664e-4b46-856e-52e0c057b93c",
+            "name": "Insert rows in a table",
+            "credentials": {
+                "postgres": {
+                    "id": "GNN4j8dXGQvAAPpG",
+                    "name": "n8n_db"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "schema": {
+                    "__rl": true,
+                    "value": "moltbot",
+                    "mode": "list",
+                    "cachedResultName": "moltbot"
+                },
+                "table": {
+                    "__rl": true,
+                    "value": "logs_infraestructura",
+                    "mode": "list",
+                    "cachedResultName": "logs_infraestructura"
+                },
+                "columns": {
+                    "mappingMode": "defineBelow",
+                    "value": {
+                        "servicio": "RabbitMQ",
+                        "estado": "Offline"
+                    },
+                    "matchingColumns": [
+                        "id"
+                    ],
+                    "schema": [
+                        {
+                            "id": "id",
+                            "displayName": "id",
+                            "required": false,
+                            "defaultMatch": true,
+                            "display": true,
+                            "type": "number",
+                            "canBeUsedToMatch": true,
+                            "removed": true
+                        },
+                        {
+                            "id": "servicio",
+                            "displayName": "servicio",
+                            "required": false,
+                            "defaultMatch": false,
+                            "display": true,
+                            "type": "string",
+                            "canBeUsedToMatch": true
+                        },
+                        {
+                            "id": "estado",
+                            "displayName": "estado",
+                            "required": false,
+                            "defaultMatch": false,
+                            "display": true,
+                            "type": "string",
+                            "canBeUsedToMatch": true
+                        },
+                        {
+                            "id": "fecha",
+                            "displayName": "fecha",
+                            "required": false,
+                            "defaultMatch": false,
+                            "display": true,
+                            "type": "dateTime",
+                            "canBeUsedToMatch": true,
+                            "removed": true
+                        }
+                    ],
+                    "attemptToConvertTypes": false,
+                    "convertFieldsToString": false
+                },
+                "options": {}
+            },
+            "type": "n8n-nodes-base.postgres",
+            "typeVersion": 2.6,
+            "position": [
+                208,
+                0
+            ],
+            "id": "7c6174d9-a003-4931-b493-754b02533b7a",
+            "name": "Insert rows in a table1",
+            "credentials": {
+                "postgres": {
+                    "id": "GNN4j8dXGQvAAPpG",
+                    "name": "n8n_db"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "authentication": "webhook",
+                "content": "🚨 ¡ATENCIÓN JAVI! El servicio RabbitMQ en el **mac-dev-javi** no responde. Revisa el estado de Docker.",
+                "options": {}
+            },
+            "type": "n8n-nodes-base.discord",
+            "typeVersion": 2,
+            "position": [
+                208,
+                192
+            ],
+            "id": "9319daf7-ad13-4edc-bf90-bb2d59c76165",
+            "name": "Discord",
+            "webhookId": "01c84dc5-387b-4e74-85e4-32fd1eaaa5f4",
+            "credentials": {
+                "discordWebhookApi": {
+                    "id": "4xU8vTms95p6bUoB",
+                    "name": "Discord Webhook account"
+                }
+            }
+        }
+    ],
+    "connections": {
+        "Schedule Trigger": {
+            "main": [
+                [
+                    {
+                        "node": "HTTP Request",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "HTTP Request": {
+            "main": [
+                [
+                    {
+                        "node": "If",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "If": {
+            "main": [
+                [
+                    {
+                        "node": "Insert rows in a table",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "Insert rows in a table1",
+                        "type": "main",
+                        "index": 0
+                    },
+                    {
+                        "node": "Discord",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    }
+}
