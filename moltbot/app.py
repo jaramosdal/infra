@@ -3,7 +3,7 @@ import os
 import json
 from database import setup_db, insert_factura, get_n8n_execution_count, get_total_gastos_mes
 from processors.backup_manager import backup_n8n_workflows
-from processors.bill_parser import extraer_importe_iberdrola
+from processors.bill_parser import extraer_importe_iberdrola, extraer_importe_totalenergies
 from utils.discord_bot import enviar_notificacion_factura
 
 # Inicializamos la base de datos
@@ -22,19 +22,28 @@ channel.queue_declare(queue='tareas_facturas')
 
 def callback_facturas(ch, method, properties, body):
     try:
-        # n8n envía un JSON con el texto del PDF
+        # n8n envía un JSON con el texto del PDF o del cuerpo del email
         datos = json.loads(body)
-        texto_pdf = datos.get('text', '')
+        proveedor = properties.headers.get('proveedor', '') if properties.headers else 'desconocido'
         
-        # Usamos el procesador modular
-        importe = extraer_importe_iberdrola(texto_pdf)
+        texto = datos.get('text', '')
+        
+        # Seleccionamos el procesador según el proveedor
+        proveedor_lower = proveedor.lower()
+        if proveedor_lower == 'totalenergies':
+            importe = extraer_importe_totalenergies(texto)
+        elif proveedor_lower == 'iberdrola':
+            importe = extraer_importe_iberdrola(texto)
+        else:
+            print(f"⚠️ Proveedor desconocido: {proveedor}")
+            importe = None
         
         if importe:
             # 1. Guardar en DB
-            id_db = insert_factura(proveedor="Iberdrola", importe=importe, texto=texto_pdf[:500])
+            id_db = insert_factura(proveedor=proveedor, importe=importe, texto=texto[:500])
             
             # 2. Avisar a Discord
-            enviar_notificacion_factura("Iberdrola", importe)
+            enviar_notificacion_factura(proveedor, importe)
 
             print(f"✅ Factura guardada: {importe}€ (ID: {id_db})")
         else:
