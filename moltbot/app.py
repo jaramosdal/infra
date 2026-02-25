@@ -1,6 +1,6 @@
 import pika
-import os
 import json
+from config import RABBIT_USER, RABBIT_PASSWORD, RABBIT_HOST
 from database import setup_db, insert_factura, get_n8n_execution_count, get_total_gastos_mes
 from processors.backup_manager import backup_n8n_workflows
 from processors.bill_parser import extraer_importe_iberdrola, extraer_importe_totalenergies
@@ -10,10 +10,8 @@ from utils.discord_bot import enviar_notificacion_factura
 setup_db()
 
 # Configuración RabbitMQ
-RABBIT_USER = os.getenv('RABBIT_USER', 'guest')
-RABBIT_PASS = os.getenv('RABBIT_PASSWORD', 'guest')
-credentials = pika.PlainCredentials(RABBIT_USER, RABBIT_PASS)
-connection = pika.BlockingConnection(pika.ConnectionParameters(host='rabbitmq', credentials=credentials))
+credentials = pika.PlainCredentials(RABBIT_USER, RABBIT_PASSWORD)
+connection = pika.BlockingConnection(pika.ConnectionParameters(host=RABBIT_HOST, credentials=credentials))
 channel = connection.channel()
 
 # Declaramos colas

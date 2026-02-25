@@ -1,7 +1,7 @@
 import requests
-import os
+from config import DISCORD_WEBHOOK_URL_FACTURAS
 
-WEBHOOK_URL = os.getenv('DISCORD_WEBHOOK_URL_FACTURAS', 'TU_URL_AQUI')
+WEBHOOK_URL = DISCORD_WEBHOOK_URL_FACTURAS
 
 def enviar_notificacion_factura(proveedor, importe):
     """Envía un mensaje elegante a Discord usando Webhooks"""

@@ -1,12 +1,6 @@
 import psycopg2
-import os
 from datetime import datetime
-
-# Variables de entorno (ya las tienes)
-POSTGRES_HOST = 'postgres'
-POSTGRES_DB = os.getenv('POSTGRES_DB', 'n8n')
-POSTGRES_USER = os.getenv('POSTGRES_USER', 'n8n_user')
-POSTGRES_PASSWORD = os.getenv('POSTGRES_PASSWORD', 'n8n_password')
+from config import POSTGRES_HOST, POSTGRES_DB, POSTGRES_USER, POSTGRES_PASSWORD
 
 def _get_connection():
     return psycopg2.connect(
