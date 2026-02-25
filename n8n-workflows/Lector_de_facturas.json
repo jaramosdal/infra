@@ -12,7 +12,7 @@
                 },
                 "simple": false,
                 "filters": {
-                    "q": "from:clientes@clientesiberdrola.es subject:\"Ya tienes disponible tu factura de electricidad de Iberdrola\" has:attachment"
+                    "q": "(from:clientes@clientesiberdrola.es subject:\"Ya tienes disponible tu factura de electricidad de Iberdrola\" has:attachment) OR (from:GRP.es.streamserve@mail02.totalenergies.com subject:\"Nueva factura\")"
                 },
                 "options": {
                     "dataPropertyAttachmentsPrefixName": "attachment_",
@@ -62,8 +62,8 @@
             "type": "n8n-nodes-base.filter",
             "typeVersion": 2.3,
             "position": [
-                -1888,
-                -160
+                -2000,
+                -480
             ],
             "id": "a80f8ce7-e8b6-4792-9a6f-45bb137ea701",
             "name": "Filter"
@@ -85,8 +85,8 @@
             "type": "n8n-nodes-base.rabbitmq",
             "typeVersion": 1.1,
             "position": [
-                -1392,
-                -160
+                -1328,
+                -288
             ],
             "id": "5408f224-8c00-4a3b-86f0-5a19e54ca053",
             "name": "RabbitMQ",
@@ -106,11 +106,120 @@
             "type": "n8n-nodes-base.extractFromFile",
             "typeVersion": 1.1,
             "position": [
-                -1664,
-                -160
+                -1536,
+                -288
             ],
             "id": "4be2a07e-dd9d-46d1-9543-765f5bfe6e22",
             "name": "Extract from File"
+        },
+        {
+            "parameters": {
+                "rules": {
+                    "values": [
+                        {
+                            "conditions": {
+                                "options": {
+                                    "caseSensitive": true,
+                                    "leftValue": "",
+                                    "typeValidation": "strict",
+                                    "version": 3
+                                },
+                                "conditions": [
+                                    {
+                                        "leftValue": "={{ $json.headers.from }}",
+                                        "rightValue": "iberdrola",
+                                        "operator": {
+                                            "type": "string",
+                                            "operation": "contains"
+                                        },
+                                        "id": "3e5020e2-dce6-4759-a112-13fad61bb75f"
+                                    }
+                                ],
+                                "combinator": "and"
+                            },
+                            "renameOutput": true,
+                            "outputKey": "iberdrola"
+                        },
+                        {
+                            "conditions": {
+                                "options": {
+                                    "caseSensitive": true,
+                                    "leftValue": "",
+                                    "typeValidation": "strict",
+                                    "version": 3
+                                },
+                                "conditions": [
+                                    {
+                                        "id": "f05fdd4b-22ff-4ca8-bb10-7c9f2c8bc015",
+                                        "leftValue": "={{ $json.headers.from }}",
+                                        "rightValue": "totalenergies",
+                                        "operator": {
+                                            "type": "string",
+                                            "operation": "contains"
+                                        }
+                                    }
+                                ],
+                                "combinator": "and"
+                            },
+                            "renameOutput": true,
+                            "outputKey": "totalenergies"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "type": "n8n-nodes-base.switch",
+            "typeVersion": 3.4,
+            "position": [
+                -1872,
+                -160
+            ],
+            "id": "ea42ed6c-c653-430d-a594-c649ef5e6631",
+            "name": "Switch"
+        },
+        {
+            "parameters": {
+                "mode": "raw",
+                "jsonOutput": "={\n  \"text\": \"{{ $json.text }}\"\n}\n ",
+                "options": {}
+            },
+            "type": "n8n-nodes-base.set",
+            "typeVersion": 3.4,
+            "position": [
+                -1520,
+                48
+            ],
+            "id": "1f071f58-96ca-48f8-8ecb-902967dd331f",
+            "name": "Edit Fields"
+        },
+        {
+            "parameters": {
+                "queue": "tareas_facturas",
+                "options": {
+                    "headers": {
+                        "header": [
+                            {
+                                "key": "proveedor",
+                                "value": "totalenergies"
+                            }
+                        ]
+                    }
+                }
+            },
+            "type": "n8n-nodes-base.rabbitmq",
+            "typeVersion": 1.1,
+            "position": [
+                -1328,
+                48
+            ],
+            "id": "125bbd2b-4c3f-48fc-99fc-fb891b0dc004",
+            "name": "RabbitMQ1",
+            "credentials": {
+                "rabbitmq": {
+                    "id": "VvAOaGKnWq2ebqwD",
+                    "name": "RabbitMQ account"
+                }
+            }
         }
     ],
     "connections": {
@@ -118,7 +227,7 @@
             "main": [
                 [
                     {
-                        "node": "Filter",
+                        "node": "Switch",
                         "type": "main",
                         "index": 0
                     }
@@ -127,13 +236,7 @@
         },
         "Filter": {
             "main": [
-                [
-                    {
-                        "node": "Extract from File",
-                        "type": "main",
-                        "index": 0
-                    }
-                ]
+                []
             ]
         },
         "Extract from File": {
@@ -141,6 +244,35 @@
                 [
                     {
                         "node": "RabbitMQ",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Switch": {
+            "main": [
+                [
+                    {
+                        "node": "Extract from File",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "Edit Fields",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Edit Fields": {
+            "main": [
+                [
+                    {
+                        "node": "RabbitMQ1",
                         "type": "main",
                         "index": 0
                     }
