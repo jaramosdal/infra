@@ -1,71 +1,127 @@
+"""
+Parsers de facturas por proveedor.
+
+Cada proveedor implementa ``BillParser`` y se registra con ``@register_parser``.
+Para añadir un nuevo proveedor basta con crear una nueva clase decorada;
+no es necesario modificar el código existente (Open/Closed).
+"""
+
+from __future__ import annotations
+
+import logging
 import re
+from abc import ABC, abstractmethod
+from typing import Optional
 
-def extraer_importe_iberdrola(texto):
-    """
-    Busca el total final de la factura de Iberdrola.
-    El formato objetivo es: TOTAL IMPORTE FACTURA 170,14 €
-    """
-    # Buscamos la frase completa para no confundirnos con subtotales o el IVA
-    # \s+ maneja espacios o saltos de línea inesperados
-    # ([\d.,]+) captura el número con decimales
-    patron = r'TOTAL IMPORTE FACTURA\s+([\d.,]+)\s?€'
-    
-    match = re.search(patron, texto, re.IGNORECASE)
-    
-    if match:
-        importe_str = match.group(1)
-        # Limpieza: Iberdrola usa ',' para decimales y a veces '.' para miles (ej: 1.170,14)
-        # Primero quitamos el punto de miles (si existiera) y luego cambiamos la coma por punto.
-        importe_limpio = importe_str.replace('.', '').replace(',', '.')
-        
-        try:
-            return float(importe_limpio)
-        except ValueError:
-            print(f"❌ No se pudo convertir {importe_str} a número.")
-            return None
-            
-    return None
+logger = logging.getLogger(__name__)
 
-def extraer_importe_totalenergies(texto):
+
+# ---------------------------------------------------------------------------
+# Base
+# ---------------------------------------------------------------------------
+
+class BillParser(ABC):
+    """Interfaz común que todo parser de factura debe implementar."""
+
+    @abstractmethod
+    def extraer_importe(self, texto: str) -> Optional[float]:
+        """Extrae el importe total de la factura a partir de su texto."""
+
+
+# ---------------------------------------------------------------------------
+# Registry de parsers  (Open/Closed)
+# ---------------------------------------------------------------------------
+
+_PARSER_REGISTRY: dict[str, type[BillParser]] = {}
+
+
+def register_parser(provider: str):
+    """Decorador que registra un parser para un proveedor dado (en minúsculas)."""
+
+    def decorator(cls: type[BillParser]) -> type[BillParser]:
+        _PARSER_REGISTRY[provider.lower()] = cls
+        return cls
+
+    return decorator
+
+
+def get_parser(provider: str) -> Optional[BillParser]:
+    """Devuelve una instancia del parser asociado al proveedor, o ``None``."""
+    cls = _PARSER_REGISTRY.get(provider.lower())
+    if cls is None:
+        logger.warning("Proveedor desconocido: %s", provider)
+        return None
+    return cls()
+
+
+# ---------------------------------------------------------------------------
+# Utilidades compartidas (DRY)
+# ---------------------------------------------------------------------------
+
+def _parse_importe_es(raw: str) -> Optional[float]:
     """
-    Busca el total final de la factura de TotalEnergies.
-    El formato es: línea "Importe", luego fecha, luego tipo de servicio, luego "454,09 €"
+    Convierte un string con formato numérico español (``1.170,14``) a ``float``.
+
+    Elimina el separador de miles (punto) y sustituye la coma decimal por punto.
     """
-    # Buscamos el patrón donde después de "Importe" viene una línea con fecha,
-    # luego tipo de servicio, luego el número con €
-    # Usamos una búsqueda más flexible: buscamos números seguidos de € que aparezcan
-    # después de "Importe" en el contexto de la factura
-    
-    # Primero intentamos buscar en el contexto de "Importe"
-    patron_importe = r'Importe\s*\n\s*[\d.]+\.\d+\.\d+\s*\n\s*[^\n]+\n\s*([\d,]+)\s*€'
-    
-    match = re.search(patron_importe, texto, re.IGNORECASE | re.DOTALL)
-    
-    if match:
-        importe_str = match.group(1)
-        # TotalEnergies usa ',' para decimales
-        importe_limpio = importe_str.replace('.', '').replace(',', '.')
-        
-        try:
-            return float(importe_limpio)
-        except ValueError:
-            print(f"❌ No se pudo convertir {importe_str} a número.")
-            return None
-    
-    # Si el patrón anterior no funciona, buscamos simplemente números con formato "XXX,XX €"
-    # y devolvemos el último encontrado (más cercano al final del documento)
-    patron_simple = r'([\d,]+)\s*€'
-    matches = re.findall(patron_simple, texto)
-    
-    if matches:
-        # Tomamos el último número encontrado (más probable que sea el total)
-        importe_str = matches[-1]
-        importe_limpio = importe_str.replace('.', '').replace(',', '.')
-        
-        try:
-            return float(importe_limpio)
-        except ValueError:
-            print(f"❌ No se pudo convertir {importe_str} a número.")
-            return None
-    
-    return None
+    try:
+        return float(raw.replace(".", "").replace(",", "."))
+    except ValueError:
+        logger.error("No se pudo convertir '%s' a número.", raw)
+        return None
+
+
+# ---------------------------------------------------------------------------
+# Implementaciones concretas
+# ---------------------------------------------------------------------------
+
+@register_parser("iberdrola")
+class IberdrolaBillParser(BillParser):
+    """Parser para facturas de Iberdrola."""
+
+    _PATTERN = re.compile(
+        r"TOTAL IMPORTE FACTURA\s+([\d.,]+)\s?€", re.IGNORECASE
+    )
+
+    def extraer_importe(self, texto: str) -> Optional[float]:
+        match = self._PATTERN.search(texto)
+        if match:
+            return _parse_importe_es(match.group(1))
+        return None
+
+
+@register_parser("totalenergies")
+class TotalEnergiesBillParser(BillParser):
+    """Parser para facturas de TotalEnergies."""
+
+    _PATTERN_DETAILED = re.compile(
+        r"Importe\s*\n\s*[\d.]+\.\d+\.\d+\s*\n\s*[^\n]+\n\s*([\d,]+)\s*€",
+        re.IGNORECASE | re.DOTALL,
+    )
+    _PATTERN_SIMPLE = re.compile(r"([\d,]+)\s*€")
+
+    def extraer_importe(self, texto: str) -> Optional[float]:
+        match = self._PATTERN_DETAILED.search(texto)
+        if match:
+            return _parse_importe_es(match.group(1))
+
+        # Fallback: último importe con formato «XXX,XX €»
+        matches = self._PATTERN_SIMPLE.findall(texto)
+        if matches:
+            return _parse_importe_es(matches[-1])
+
+        return None
+
+
+# ---------------------------------------------------------------------------
+# Compatibilidad con el código existente (funciones helper)
+# ---------------------------------------------------------------------------
+
+def extraer_importe_iberdrola(texto: str) -> Optional[float]:
+    """Wrapper de compatibilidad."""
+    return IberdrolaBillParser().extraer_importe(texto)
+
+
+def extraer_importe_totalenergies(texto: str) -> Optional[float]:
+    """Wrapper de compatibilidad."""
+    return TotalEnergiesBillParser().extraer_importe(texto)
