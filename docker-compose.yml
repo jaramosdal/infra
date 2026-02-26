@@ -37,6 +37,7 @@ services:
     ports:
       - "5678:5678"
     environment:
+      - GENERIC_TIMEZONE=Europe/Madrid
       - DB_TYPE=${N8N_DB_TYPE}
       - DB_POSTGRESDB_HOST=${N8N_DB_HOST}
       - DB_POSTGRESDB_PORT=${N8N_DB_PORT}

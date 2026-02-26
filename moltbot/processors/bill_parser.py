@@ -113,6 +113,21 @@ class TotalEnergiesBillParser(BillParser):
         return None
 
 
+@register_parser("o2")
+class O2BillParser(BillParser):
+    """Parser para facturas de O2."""
+
+    _PATTERN = re.compile(
+        r"Total factura\s+([\d.]+,\d{2})\s*€", re.IGNORECASE
+    )
+
+    def extraer_importe(self, texto: str) -> Optional[float]:
+        match = self._PATTERN.search(texto)
+        if match:
+            return _parse_importe_es(match.group(1))
+        return None
+
+
 # ---------------------------------------------------------------------------
 # Compatibilidad con el código existente (funciones helper)
 # ---------------------------------------------------------------------------
@@ -125,3 +140,8 @@ def extraer_importe_iberdrola(texto: str) -> Optional[float]:
 def extraer_importe_totalenergies(texto: str) -> Optional[float]:
     """Wrapper de compatibilidad."""
     return TotalEnergiesBillParser().extraer_importe(texto)
+
+
+def extraer_importe_o2(texto: str) -> Optional[float]:
+    """Wrapper de compatibilidad."""
+    return O2BillParser().extraer_importe(texto)
