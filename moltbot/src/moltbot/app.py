@@ -10,11 +10,11 @@ import logging
 import signal
 import sys
 
-from config import setup_logging
-from database import setup_db
-from rabbit import connect as connect_rabbit
+from moltbot.config import setup_logging
+from moltbot.db import setup_db
+from moltbot.messaging.rabbit import connect as connect_rabbit
 
-import commands as _commands  # noqa: F401 — registra los handlers al importar
+import moltbot.commands as _commands  # noqa: F401 — registra los handlers al importar
 
 logger = logging.getLogger(__name__)
 

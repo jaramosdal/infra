@@ -12,7 +12,7 @@
                 },
                 "simple": false,
                 "filters": {
-                    "q": "(from:clientes@clientesiberdrola.es subject:\"Ya tienes disponible tu factura de electricidad de Iberdrola\" has:attachment) OR (from:GRP.es.streamserve@mail02.totalenergies.com subject:\"Nueva factura\")"
+                    "q": "(from:clientes@clientesiberdrola.es subject:\"Ya tienes disponible tu factura de electricidad de Iberdrola\" has:attachment) OR (from:GRP.es.streamserve@mail02.totalenergies.com subject:\"Nueva factura\") OR \n(from:info@o2online.es subject:\"Factura O2\")"
                 },
                 "options": {
                     "dataPropertyAttachmentsPrefixName": "attachment_",
@@ -23,7 +23,7 @@
             "typeVersion": 1.3,
             "position": [
                 -2080,
-                -160
+                -144
             ],
             "id": "7ce132ef-ea59-408d-8b78-71c1a94a4b7f",
             "name": "Gmail Trigger",
@@ -163,6 +163,30 @@
                             },
                             "renameOutput": true,
                             "outputKey": "totalenergies"
+                        },
+                        {
+                            "conditions": {
+                                "options": {
+                                    "caseSensitive": true,
+                                    "leftValue": "",
+                                    "typeValidation": "strict",
+                                    "version": 3
+                                },
+                                "conditions": [
+                                    {
+                                        "id": "cbadae3c-1182-4c01-aa3a-029c82fd2fd0",
+                                        "leftValue": "={{ $json.headers.from }}",
+                                        "rightValue": "o2",
+                                        "operator": {
+                                            "type": "string",
+                                            "operation": "contains"
+                                        }
+                                    }
+                                ],
+                                "combinator": "and"
+                            },
+                            "renameOutput": true,
+                            "outputKey": "o2"
                         }
                     ]
                 },
@@ -186,8 +210,8 @@
             "type": "n8n-nodes-base.set",
             "typeVersion": 3.4,
             "position": [
-                -1520,
-                48
+                -1536,
+                -96
             ],
             "id": "1f071f58-96ca-48f8-8ecb-902967dd331f",
             "name": "Edit Fields"
@@ -210,10 +234,54 @@
             "typeVersion": 1.1,
             "position": [
                 -1328,
-                48
+                -96
             ],
             "id": "125bbd2b-4c3f-48fc-99fc-fb891b0dc004",
             "name": "RabbitMQ1",
+            "credentials": {
+                "rabbitmq": {
+                    "id": "VvAOaGKnWq2ebqwD",
+                    "name": "RabbitMQ account"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "operation": "pdf",
+                "binaryPropertyName": "attachment_0",
+                "options": {}
+            },
+            "type": "n8n-nodes-base.extractFromFile",
+            "typeVersion": 1.1,
+            "position": [
+                -1536,
+                96
+            ],
+            "id": "6cd9ce3a-fa52-4dd2-813c-b68c314f3f0c",
+            "name": "Extract from File1"
+        },
+        {
+            "parameters": {
+                "queue": "tareas_facturas",
+                "options": {
+                    "headers": {
+                        "header": [
+                            {
+                                "key": "proveedor",
+                                "value": "o2"
+                            }
+                        ]
+                    }
+                }
+            },
+            "type": "n8n-nodes-base.rabbitmq",
+            "typeVersion": 1.1,
+            "position": [
+                -1328,
+                96
+            ],
+            "id": "b30804b3-ad30-4844-aa05-f9aff5e05245",
+            "name": "RabbitMQ2",
             "credentials": {
                 "rabbitmq": {
                     "id": "VvAOaGKnWq2ebqwD",
@@ -265,6 +333,13 @@
                         "type": "main",
                         "index": 0
                     }
+                ],
+                [
+                    {
+                        "node": "Extract from File1",
+                        "type": "main",
+                        "index": 0
+                    }
                 ]
             ]
         },
@@ -273,6 +348,17 @@
                 [
                     {
                         "node": "RabbitMQ1",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Extract from File1": {
+            "main": [
+                [
+                    {
+                        "node": "RabbitMQ2",
                         "type": "main",
                         "index": 0
                     }

@@ -8,13 +8,17 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /app
 
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
-
-COPY . .
+# Copiar primero pyproject.toml para cachear la capa de dependencias
+# 1. Copia la metadata
+COPY pyproject.toml . 
+# 2. Copia el código fuente
+COPY src/ src/
+# 3. Instala dependencias + tu paquete
+RUN pip install --no-cache-dir .
 
 # Ejecutar como usuario no-root (seguridad)
 RUN useradd --create-home moltbot
 USER moltbot
 
-CMD ["python", "-u", "app.py"]
+# 4. Arranca ejecutando __main__.py → app.main()
+CMD ["python", "-u", "-m", "moltbot"]

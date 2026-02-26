@@ -8,8 +8,8 @@ import re
 from pathlib import Path
 from typing import Optional
 
-from config import settings
-from database import get_workflows
+from moltbot.config import settings
+from moltbot.db import get_workflows
 
 logger = logging.getLogger(__name__)
 

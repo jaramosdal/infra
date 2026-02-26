@@ -7,9 +7,7 @@ importan las constantes desde este fichero en lugar de leer os.getenv directamen
 
 from __future__ import annotations
 
-import logging
 import os
-import sys
 from dataclasses import dataclass, field
 
 
@@ -19,7 +17,7 @@ def _require_env(name: str) -> str:
     if not value:
         raise EnvironmentError(
             f"La variable de entorno '{name}' es obligatoria y no está definida."
-        ) 
+        )
     return value
 
 
@@ -73,13 +71,3 @@ class AppConfig:
 
 # --- Instancia global de configuración ---
 settings = AppConfig()
-
-
-def setup_logging() -> None:
-    """Configura el logging del proyecto según LOG_LEVEL."""
-    logging.basicConfig(
-        level=getattr(logging, settings.log_level.upper(), logging.INFO),
-        format="%(asctime)s | %(name)s | %(levelname)s | %(message)s",
-        datefmt="%Y-%m-%d %H:%M:%S",
-        stream=sys.stdout,
-    )

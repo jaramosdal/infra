@@ -14,11 +14,11 @@ import pika
 from pika.adapters.blocking_connection import BlockingChannel
 from pika.spec import Basic, BasicProperties
 
-from commands import dispatch
-from config import settings
-from database import insert_factura
-from processors.bill_parser import get_parser
-from utils.discord_bot import enviar_notificacion_factura
+from moltbot.commands import dispatch
+from moltbot.config import settings
+from moltbot.db import insert_factura
+from moltbot.processors.bill_parser import get_parser
+from moltbot.utils.discord_bot import enviar_notificacion_factura
 
 logger = logging.getLogger(__name__)
 

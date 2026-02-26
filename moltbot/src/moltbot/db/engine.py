@@ -14,7 +14,7 @@ from typing import Generator, Optional
 import psycopg2
 from psycopg2.extensions import connection as PgConnection
 
-from config import settings
+from moltbot.config import settings
 
 logger = logging.getLogger(__name__)
 
