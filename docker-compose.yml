@@ -12,6 +12,7 @@ services:
       - "5432:5432"
     volumes:
       - ./postgres_data:/var/lib/postgresql/data
+      - ./init-db:/docker-entrypoint-initdb.d
 
 # El gestor de colas para tus proyectos DevOps
   rabbitmq:
@@ -57,6 +58,19 @@ services:
     restart: always
 
   # GlitchTip — monitorización de errores (compatible Sentry)
+  glitchtip_migrate:
+    image: glitchtip/glitchtip
+    container_name: glitchtip_migrate
+    restart: "no"
+    command: ./manage.py migrate
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/glitchtip
+      REDIS_URL: redis://redis:6379/0
+      SECRET_KEY: ${GLITCHTIP_SECRET_KEY}
+    depends_on:
+      - postgres
+      - redis
+
   glitchtip:
     image: glitchtip/glitchtip
     container_name: glitchtip_app
@@ -64,7 +78,7 @@ services:
     ports:
       - "8000:8000"
     environment:
-      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/glitchtip
       REDIS_URL: redis://redis:6379/0
       SECRET_KEY: ${GLITCHTIP_SECRET_KEY}
       PORT: "8000"
@@ -72,8 +86,12 @@ services:
       DEFAULT_FROM_EMAIL: noreply@glitchtip.local
       EMAIL_BACKEND: django.core.mail.backends.console.EmailBackend
     depends_on:
-      - postgres
-      - redis
+      glitchtip_migrate:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_started
+      redis:
+        condition: service_started
 
   # GlitchTip worker — procesa eventos en segundo plano
   glitchtip_worker:
@@ -82,7 +100,7 @@ services:
     restart: always
     command: ./bin/run-celery-with-beat.sh
     environment:
-      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/glitchtip
       REDIS_URL: redis://redis:6379/0
       SECRET_KEY: ${GLITCHTIP_SECRET_KEY}
     depends_on:
