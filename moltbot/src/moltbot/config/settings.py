@@ -59,6 +59,15 @@ class BackupConfig:
 
 
 @dataclass(frozen=True)
+class GlitchTipConfig:
+    """Configuración de GlitchTip (Sentry-compatible) para monitorización de errores."""
+
+    dsn: str = os.getenv("GLITCHTIP_DSN", "")
+    traces_sample_rate: float = float(os.getenv("GLITCHTIP_TRACES_SAMPLE_RATE", "1.0"))
+    environment: str = os.getenv("GLITCHTIP_ENVIRONMENT", "production")
+
+
+@dataclass(frozen=True)
 class AppConfig:
     """Configuración raíz que agrupa todas las secciones."""
 
@@ -66,6 +75,7 @@ class AppConfig:
     postgres: PostgresConfig = field(default_factory=PostgresConfig)
     discord: DiscordConfig = field(default_factory=DiscordConfig)
     backup: BackupConfig = field(default_factory=BackupConfig)
+    glitchtip: GlitchTipConfig = field(default_factory=GlitchTipConfig)
     log_level: str = os.getenv("LOG_LEVEL", "INFO")
 
 

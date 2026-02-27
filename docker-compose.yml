@@ -50,6 +50,45 @@ services:
     volumes:
       - ./n8n_data:/home/node/.n8n
 
+  # Redis — backend de colas para GlitchTip (Celery)
+  redis:
+    image: redis:7-alpine
+    container_name: redis_glitchtip
+    restart: always
+
+  # GlitchTip — monitorización de errores (compatible Sentry)
+  glitchtip:
+    image: glitchtip/glitchtip
+    container_name: glitchtip_app
+    restart: always
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      REDIS_URL: redis://redis:6379/0
+      SECRET_KEY: ${GLITCHTIP_SECRET_KEY}
+      PORT: "8000"
+      GLITCHTIP_DOMAIN: ${GLITCHTIP_DOMAIN:-http://localhost:8000}
+      DEFAULT_FROM_EMAIL: noreply@glitchtip.local
+      EMAIL_BACKEND: django.core.mail.backends.console.EmailBackend
+    depends_on:
+      - postgres
+      - redis
+
+  # GlitchTip worker — procesa eventos en segundo plano
+  glitchtip_worker:
+    image: glitchtip/glitchtip
+    container_name: glitchtip_worker
+    restart: always
+    command: ./bin/run-celery-with-beat.sh
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      REDIS_URL: redis://redis:6379/0
+      SECRET_KEY: ${GLITCHTIP_SECRET_KEY}
+    depends_on:
+      - postgres
+      - redis
+
   moltbot:
     build: ./moltbot  # Docker buscará el Dockerfile en esa carpeta
     container_name: moltbot_app
@@ -61,7 +100,9 @@ services:
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD} # La que usa n8n para conectarse a la base de datos
       - DISCORD_WEBHOOK_URL_FACTURAS=${DISCORD_WEBHOOK_URL_FACTURAS}
+      - GLITCHTIP_DSN=${GLITCHTIP_DSN}
     depends_on:
       - rabbitmq
+      - glitchtip
     volumes:
       - ./n8n-workflows:/n8n-workflows  # <--- MAPEO DEL BACKUP
