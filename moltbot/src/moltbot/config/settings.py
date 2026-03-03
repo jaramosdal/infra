@@ -38,7 +38,7 @@ class PostgresConfig:
     """Configuración de conexión a PostgreSQL."""
 
     host: str = os.getenv("POSTGRES_HOST", "postgres")
-    database: str = os.getenv("POSTGRES_DB", "n8n")
+    database: str = os.getenv("POSTGRES_DB", "infra")
     user: str = os.getenv("POSTGRES_USER", "n8n_user")
     password: str = os.getenv("POSTGRES_PASSWORD", "n8n_password")
     n8n_schema: str = os.getenv("N8N_DB_SCHEMA", "n8n")
