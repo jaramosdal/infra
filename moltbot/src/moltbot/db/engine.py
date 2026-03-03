@@ -46,10 +46,11 @@ def _get_connection() -> Generator[PgConnection, None, None]:
 
 def setup_db() -> None:
     """Inicializa el esquema y todas las tablas del bot."""
+    schema = _pg.moltbot_schema
     queries = [
-        "CREATE SCHEMA IF NOT EXISTS moltbot;",
-        """
-        CREATE TABLE IF NOT EXISTS moltbot.facturas_gastos (
+        f"CREATE SCHEMA IF NOT EXISTS {schema};",
+        f"""
+        CREATE TABLE IF NOT EXISTS {schema}.facturas_gastos (
             id SERIAL PRIMARY KEY,
             proveedor VARCHAR(50) NOT NULL,
             importe DECIMAL(10, 2) NOT NULL,
@@ -57,8 +58,8 @@ def setup_db() -> None:
             texto_original TEXT
         );
         """,
-        """
-        CREATE TABLE IF NOT EXISTS moltbot.logs_infraestructura (
+        f"""
+        CREATE TABLE IF NOT EXISTS {schema}.logs_infraestructura (
             id SERIAL PRIMARY KEY,
             servicio VARCHAR(50) NOT NULL,
             estado VARCHAR(20) NOT NULL,
@@ -82,8 +83,9 @@ def setup_db() -> None:
 
 def insert_factura(proveedor: str, importe: float, texto: str = "") -> Optional[int]:
     """Inserta una nueva factura y devuelve su ID, o ``None`` en caso de error."""
-    query = """
-        INSERT INTO moltbot.facturas_gastos (proveedor, importe, texto_original)
+    schema = _pg.moltbot_schema
+    query = f"""
+        INSERT INTO {schema}.facturas_gastos (proveedor, importe, texto_original)
         VALUES (%s, %s, %s)
         RETURNING id;
     """
@@ -101,9 +103,10 @@ def insert_factura(proveedor: str, importe: float, texto: str = "") -> Optional[
 
 def get_total_gastos_mes() -> Optional[float]:
     """Suma todos los importes del mes actual."""
-    query = """
+    schema = _pg.moltbot_schema
+    query = f"""
         SELECT COALESCE(SUM(importe), 0)
-        FROM moltbot.facturas_gastos
+        FROM {schema}.facturas_gastos
         WHERE date_trunc('month', fecha_registro) = date_trunc('month', CURRENT_DATE);
     """
     try:
@@ -122,9 +125,10 @@ def get_total_gastos_mes() -> Optional[float]:
 
 def get_n8n_execution_count() -> Optional[int]:
     """Devuelve el número de ejecuciones registradas en n8n."""
+    schema = _pg.n8n_schema
     try:
         with _get_connection() as conn, conn.cursor() as cur:
-            cur.execute("SELECT count(*) FROM execution_entity;")
+            cur.execute(f"SELECT count(*) FROM {schema}.execution_entity;")
             return cur.fetchone()[0]
     except psycopg2.Error as exc:
         logger.exception("Error DB: %s", exc)
@@ -133,7 +137,8 @@ def get_n8n_execution_count() -> Optional[int]:
 
 def get_workflows() -> Optional[list[tuple]]:
     """Obtiene todos los workflows de n8n (name, nodes, connections)."""
-    query = "SELECT name, nodes, connections FROM workflow_entity;"
+    schema = _pg.n8n_schema
+    query = f"SELECT name, nodes, connections FROM {schema}.workflow_entity;"
     try:
         with _get_connection() as conn, conn.cursor() as cur:
             cur.execute(query)

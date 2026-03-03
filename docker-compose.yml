@@ -45,6 +45,7 @@ services:
       - DB_POSTGRESDB_DATABASE=${POSTGRES_DB}
       - DB_POSTGRESDB_USER=${POSTGRES_USER}
       - DB_POSTGRESDB_PASSWORD=${POSTGRES_PASSWORD}
+      - DB_POSTGRESDB_SCHEMA=n8n
       - N8N_SECURE_COOKIE=false # Para poder acceder desde el otro equipo
     depends_on:
       - postgres
@@ -119,6 +120,7 @@ services:
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD} # La que usa n8n para conectarse a la base de datos
       - DISCORD_WEBHOOK_URL_FACTURAS=${DISCORD_WEBHOOK_URL_FACTURAS}
       - GLITCHTIP_DSN=${GLITCHTIP_DSN}
+      - N8N_DB_SCHEMA=n8n
     depends_on:
       - rabbitmq
       - glitchtip

@@ -41,6 +41,8 @@ class PostgresConfig:
     database: str = os.getenv("POSTGRES_DB", "n8n")
     user: str = os.getenv("POSTGRES_USER", "n8n_user")
     password: str = os.getenv("POSTGRES_PASSWORD", "n8n_password")
+    n8n_schema: str = os.getenv("N8N_DB_SCHEMA", "n8n")
+    moltbot_schema: str = os.getenv("MOLTBOT_DB_SCHEMA", "moltbot")
 
 
 @dataclass(frozen=True)
