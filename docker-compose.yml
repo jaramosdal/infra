@@ -47,6 +47,10 @@ services:
       - DB_POSTGRESDB_PASSWORD=${POSTGRES_PASSWORD}
       - DB_POSTGRESDB_SCHEMA=n8n
       - N8N_SECURE_COOKIE=false # Para poder acceder desde el otro equipo
+      - N8N_ENCRYPTION_KEY=${N8N_ENCRYPTION_KEY} # Clave de cifrado para n8n
+      - AZURE_TENANT_ID=${AZURE_TENANT_ID}
+      - AZURE_CLIENT_ID=${AZURE_CLIENT_ID}
+      - AZURE_APP_ID=${AZURE_APP_ID}
     depends_on:
       - postgres
     volumes:
