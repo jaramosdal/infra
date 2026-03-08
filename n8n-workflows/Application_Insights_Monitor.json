@@ -6,8 +6,8 @@
             "type": "n8n-nodes-base.manualTrigger",
             "typeVersion": 1,
             "position": [
-                -560,
-                -144
+                -880,
+                -192
             ],
             "id": "651f8cbf-880d-422e-abbb-f32a96bb51be",
             "name": "When clicking ‘Execute workflow’"
@@ -20,8 +20,8 @@
             "type": "n8n-nodes-base.code",
             "typeVersion": 2,
             "position": [
-                -352,
-                80
+                -976,
+                96
             ],
             "id": "c92772da-0023-4311-a177-e3158c425043",
             "name": "Code in Python"
@@ -33,39 +33,25 @@
             "type": "n8n-nodes-base.code",
             "typeVersion": 2,
             "position": [
-                -128,
-                -144
+                -240,
+                -192
             ],
             "id": "365b4b97-4677-40de-a216-b2f704109ac4",
             "name": "Code in JavaScript"
         },
         {
             "parameters": {
-                "authentication": "webhook",
-                "operation": "__CUSTOM_API_CALL__"
-            },
-            "type": "n8n-nodes-base.discord",
-            "typeVersion": 2,
-            "position": [
-                -128,
-                80
-            ],
-            "id": "8654b95b-001f-4334-bffe-2a340c68ff35",
-            "name": "Discord",
-            "webhookId": "d0fd8756-6734-4ec2-b5e1-7b0fc5a7e7ec",
-            "credentials": {
-                "discordWebhookApi": {
-                    "id": "4xU8vTms95p6bUoB",
-                    "name": "Discord Webhook account"
-                }
-            }
-        },
-        {
-            "parameters": {
                 "method": "POST",
                 "url": "https://api.applicationinsights.io/v1/apps/43118f99-4977-4c7c-9bbe-48213be849e3/query",
-                "authentication": "genericCredentialType",
-                "genericAuthType": "oAuth2Api",
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "Authorization",
+                            "value": "=Bearer {{ $json.access_token }}"
+                        }
+                    ]
+                },
                 "sendBody": true,
                 "specifyBody": "json",
                 "jsonBody": "{\n    \"query\": \"exceptions | where timestamp > ago(15m) | order by cloud_RoleInstance asc, type asc\"\n}",
@@ -74,25 +60,54 @@
             "type": "n8n-nodes-base.httpRequest",
             "typeVersion": 4.4,
             "position": [
-                -352,
-                -144
+                -464,
+                -192
             ],
             "id": "76964b82-4800-431f-9f85-289c3fddd684",
-            "name": "Application Insights Query",
-            "credentials": {
-                "oAuth2Api": {
-                    "id": "k4kh8nCFdwGKre9u",
-                    "name": "ApplicationInsights credential"
-                }
-            }
+            "name": "Application Insights Query"
         },
         {
             "parameters": {
+                "method": "POST",
                 "url": "https://discordapp.com/api/webhooks/1472995309964759234/_uUaWytHnXx8LmB33w4Dk4oHJHK0OtaqC7pjLAYVWy2MpUmXNKCTcqi5MZu8HKfBdSdh",
                 "sendBody": true,
+                "specifyBody": "json",
+                "jsonBody": "={{ $json.discord }}",
+                "options": {}
+            },
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.4,
+            "position": [
+                64,
+                -272
+            ],
+            "id": "1e6fae1f-ba56-4a40-af0c-dddf5b3fbf94",
+            "name": "Discord Webhook"
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "=https://login.microsoftonline.com/{{$env.AZURE_TENANT_ID}}/oauth2/v2.0/token",
+                "sendBody": true,
+                "contentType": "form-urlencoded",
                 "bodyParameters": {
                     "parameters": [
-                        {}
+                        {
+                            "name": "grant_type",
+                            "value": "client_credentials"
+                        },
+                        {
+                            "name": "client_id",
+                            "value": "={{ $env.AZURE_CLIENT_ID }}"
+                        },
+                        {
+                            "name": "client_secret",
+                            "value": "={{ $env.AZURE_CLIENT_SECRET }}"
+                        },
+                        {
+                            "name": "scope",
+                            "value": "https://api.applicationinsights.io/.default"
+                        }
                     ]
                 },
                 "options": {}
@@ -100,11 +115,29 @@
             "type": "n8n-nodes-base.httpRequest",
             "typeVersion": 4.4,
             "position": [
-                80,
-                -144
+                -688,
+                -192
             ],
-            "id": "1e6fae1f-ba56-4a40-af0c-dddf5b3fbf94",
-            "name": "Discord Webhook"
+            "id": "f88f7105-762c-4ca8-a44c-cad3700f5f96",
+            "name": "HTTP Request"
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "https://default4a1bc6bc95d44183a2a2baabf61a43.2b.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/23a792c2852244d2827aed28070ddfa3/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=1sgaGiCPfWvF-ANo2ZONXqPoMARVfBUx5JZ7EogQMy8",
+                "sendBody": true,
+                "specifyBody": "json",
+                "jsonBody": "={{ $json.teams }}",
+                "options": {}
+            },
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.4,
+            "position": [
+                64,
+                -64
+            ],
+            "id": "8fb83e88-69bd-4ea7-8d67-12f20343a41b",
+            "name": "Teams Webhook"
         }
     ],
     "connections": {
@@ -112,7 +145,7 @@
             "main": [
                 [
                     {
-                        "node": "Application Insights Query",
+                        "node": "HTTP Request",
                         "type": "main",
                         "index": 0
                     }
@@ -128,7 +161,7 @@
             "main": [
                 [
                     {
-                        "node": "Discord Webhook",
+                        "node": "Teams Webhook",
                         "type": "main",
                         "index": 0
                     }
@@ -140,6 +173,17 @@
                 [
                     {
                         "node": "Code in JavaScript",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "HTTP Request": {
+            "main": [
+                [
+                    {
+                        "node": "Application Insights Query",
                         "type": "main",
                         "index": 0
                     }
