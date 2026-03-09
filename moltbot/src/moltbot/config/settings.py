@@ -38,9 +38,11 @@ class PostgresConfig:
     """Configuración de conexión a PostgreSQL."""
 
     host: str = os.getenv("POSTGRES_HOST", "postgres")
-    database: str = os.getenv("POSTGRES_DB", "n8n")
+    database: str = os.getenv("POSTGRES_DB", "infra")
     user: str = os.getenv("POSTGRES_USER", "n8n_user")
     password: str = os.getenv("POSTGRES_PASSWORD", "n8n_password")
+    n8n_schema: str = os.getenv("N8N_DB_SCHEMA", "n8n")
+    moltbot_schema: str = os.getenv("MOLTBOT_DB_SCHEMA", "moltbot")
 
 
 @dataclass(frozen=True)
@@ -59,6 +61,15 @@ class BackupConfig:
 
 
 @dataclass(frozen=True)
+class GlitchTipConfig:
+    """Configuración de GlitchTip (Sentry-compatible) para monitorización de errores."""
+
+    dsn: str = os.getenv("GLITCHTIP_DSN", "")
+    traces_sample_rate: float = float(os.getenv("GLITCHTIP_TRACES_SAMPLE_RATE", "1.0"))
+    environment: str = os.getenv("GLITCHTIP_ENVIRONMENT", "production")
+
+
+@dataclass(frozen=True)
 class AppConfig:
     """Configuración raíz que agrupa todas las secciones."""
 
@@ -66,6 +77,7 @@ class AppConfig:
     postgres: PostgresConfig = field(default_factory=PostgresConfig)
     discord: DiscordConfig = field(default_factory=DiscordConfig)
     backup: BackupConfig = field(default_factory=BackupConfig)
+    glitchtip: GlitchTipConfig = field(default_factory=GlitchTipConfig)
     log_level: str = os.getenv("LOG_LEVEL", "INFO")
 
 

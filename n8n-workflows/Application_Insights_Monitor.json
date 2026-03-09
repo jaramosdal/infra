@@ -1,0 +1,194 @@
+{
+    "name": "Application Insights Monitor",
+    "nodes": [
+        {
+            "parameters": {},
+            "type": "n8n-nodes-base.manualTrigger",
+            "typeVersion": 1,
+            "position": [
+                -880,
+                -192
+            ],
+            "id": "651f8cbf-880d-422e-abbb-f32a96bb51be",
+            "name": "When clicking ‘Execute workflow’"
+        },
+        {
+            "parameters": {
+                "language": "pythonNative",
+                "pythonCode": "from collections import defaultdict\nimport json\n\n# Obtener la respuesta del nodo anterior\nitems = _input.all()\ndata = items[0].json\n\n# Mapear columnas a sus índices para convertir las filas a dicts\ntable = data['tables'][0]\ncolumns = [col['name'] for col in table['columns']]\nrows = table['rows']\n\nerrors = [dict(zip(columns, row)) for row in rows]\n\nif not errors:\n    return [{\"json\": {\"skip\": True, \"message\": \"No hay errores en los últimos 15 minutos\"}}]\n\n# Agrupar por cloud_RoleInstance y tipo de error (ya vienen ordenados por la KQL)\ngrouped = defaultdict(lambda: defaultdict(list))\nfor error in errors:\n    instance = error.get('cloud_RoleInstance') or 'Unknown'\n    error_type = error.get('type') or 'Unknown'\n    grouped[instance][error_type].append(error)\n\ntotal_errors = len(errors)\n\n# ── Teams (MessageCard legacy, compatible con webhooks simples) ──────────────\ndef build_teams_payload(grouped, total):\n    sections = []\n    for instance in sorted(grouped):\n        for error_type in sorted(grouped[instance]):\n            errs = grouped[instance][error_type]\n            first = errs[0]\n            short_type = error_type.split('.')[-1]\n            message = (first.get('innermostMessage') or\n                       first.get('outerMessage') or\n                       first.get('message') or 'Sin mensaje')\n            sections.append({\n                \"activityTitle\": f\"🔴 [{instance}] {short_type} — {len(errs)} ocurrencia(s)\",\n                \"activitySubtitle\": f\"Instancia: `{instance}` | Servicio: `{first.get('cloud_RoleName', '-')}`\",\n                \"activityText\": message[:300],\n                \"facts\": [\n                    {\"name\": \"Tipo completo\", \"value\": error_type},\n                    {\"name\": \"Operación\",     \"value\": first.get('operation_Name', '-')},\n                    {\"name\": \"Último visto\",  \"value\": first.get('timestamp', '-')},\n                ]\n            })\n    return {\n        \"@type\": \"MessageCard\",\n        \"@context\": \"http://schema.org/extensions\",\n        \"themeColor\": \"FF0000\",\n        \"summary\": f\"{total} errores detectados\",\n        \"title\": f\"⚠️ {total} errores en los últimos 15 min — Application Insights\",\n        \"sections\": sections\n    }\n\n# ── Discord (Webhook con embeds) ─────────────────────────────────────────────\ndef build_discord_payload(grouped, total):\n    embeds = []\n    for instance in sorted(grouped):\n        for error_type in sorted(grouped[instance]):\n            errs = grouped[instance][error_type]\n            first = errs[0]\n            short_type = error_type.split('.')[-1]\n            message = (first.get('innermostMessage') or\n                       first.get('outerMessage') or\n                       first.get('message') or 'Sin mensaje')\n            embeds.append({\n                \"title\": f\"🔴 [{instance}] {short_type} × {len(errs)}\",\n                \"description\": message[:300],\n                \"color\": 15158332,  # Rojo\n                \"fields\": [\n                    {\"name\": \"Instancia\",      \"value\": instance,                            \"inline\": True},\n                    {\"name\": \"Servicio\",        \"value\": first.get('cloud_RoleName', '-'),   \"inline\": True},\n                    {\"name\": \"Operación\",       \"value\": first.get('operation_Name', '-'),   \"inline\": False},\n                    {\"name\": \"Tipo completo\",   \"value\": f\"`{error_type}`\",                  \"inline\": False},\n                    {\"name\": \"Último registro\", \"value\": first.get('timestamp', '-'),        \"inline\": False},\n                ],\n                \"footer\": {\"text\": \"Application Insights Alert\"}\n            })\n    return {\n        \"username\": \"Application Insights\",\n        \"avatar_url\": \"https://azure.microsoft.com/svghandler/application-insights/\",\n        \"content\": f\"⚠️ **{total} errores detectados en los últimos 15 minutos**\",\n        \"embeds\": embeds[:10]  # Discord permite máximo 10 embeds por mensaje\n    }\n\nteams_payload   = build_teams_payload(grouped, total_errors)\ndiscord_payload = build_discord_payload(grouped, total_errors)\n\nreturn [{\n    \"json\": {\n        \"teams\":       teams_payload,\n        \"discord\":     discord_payload,\n        \"error_count\": total_errors,\n        \"skip\":        False\n    }\n}]"
+            },
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                -976,
+                96
+            ],
+            "id": "c92772da-0023-4311-a177-e3158c425043",
+            "name": "Code in Python"
+        },
+        {
+            "parameters": {
+                "jsCode": "// Obtener la respuesta del nodo anterior\nconst data = $input.all()[0].json;\n\n// Mapear columnas a índices para convertir filas a objetos\nconst table = data.tables[0];\nconst columns = table.columns.map(col => col.name);\nconst rows = table.rows;\n\nconst errors = rows.map(row =>\n  Object.fromEntries(columns.map((col, i) => [col, row[i]]))\n);\n\nif (!errors.length) {\n  return [{ json: { skip: true, message: \"No hay errores en los últimos 15 minutos\" } }];\n}\n\n// Agrupar por cloud_RoleInstance y tipo de error\nconst grouped = {};\nfor (const error of errors) {\n  const instance = error.cloud_RoleInstance || 'Unknown';\n  const errorType = error.type || 'Unknown';\n  if (!grouped[instance]) grouped[instance] = {};\n  if (!grouped[instance][errorType]) grouped[instance][errorType] = [];\n  grouped[instance][errorType].push(error);\n}\n\nconst totalErrors = errors.length;\n\n// ── Teams (MessageCard) ──────────────────────────────────────────────────────\nfunction buildTeamsPayload(grouped, total) {\n  const sections = [];\n  for (const instance of Object.keys(grouped).sort()) {\n    for (const errorType of Object.keys(grouped[instance]).sort()) {\n      const errs = grouped[instance][errorType];\n      const first = errs[0];\n      const shortType = errorType.split('.').at(-1);\n      const message = first.innermostMessage || first.outerMessage || first.message || 'Sin mensaje';\n      sections.push({\n        activityTitle: `🔴 [${instance}] **${shortType}** — ${errs.length} ocurrencia(s)`,\n        activitySubtitle: `Instancia: \\`${instance}\\` | Servicio: \\`${first.cloud_RoleName || '-'}\\``,\n        activityText: message.substring(0, 300),\n        facts: [\n          { name: \"Tipo completo\", value: errorType },\n          { name: \"Operación\",     value: first.operation_Name || '-' },\n          { name: \"Último visto\",  value: first.timestamp || '-' },\n        ]\n      });\n    }\n  }\n  return {\n    \"@type\": \"MessageCard\",\n    \"@context\": \"http://schema.org/extensions\",\n    themeColor: \"FF0000\",\n    summary: `${total} errores detectados`,\n    title: `⚠️ ${total} errores en los últimos 15 min — Application Insights`,\n    sections\n  };\n}\n\n// ── Discord (Webhook con embeds) ─────────────────────────────────────────────\nfunction buildDiscordPayload(grouped, total) {\n  const embeds = [];\n  for (const instance of Object.keys(grouped).sort()) {\n    for (const errorType of Object.keys(grouped[instance]).sort()) {\n      const errs = grouped[instance][errorType];\n      const first = errs[0];\n      const shortType = errorType.split('.').at(-1);\n      const message = first.innermostMessage || first.outerMessage || first.message || 'Sin mensaje';\n      embeds.push({\n        title: `🔴 [${instance}] ${shortType} × ${errs.length}`,\n        description: message.substring(0, 300),\n        color: 15158332,\n        fields: [\n          { name: \"Instancia\",      value: instance,                          inline: true  },\n          { name: \"Servicio\",       value: first.cloud_RoleName || '-',       inline: true  },\n          { name: \"Operación\",      value: first.operation_Name || '-',       inline: false },\n          { name: \"Tipo completo\",  value: `\\`${errorType}\\``,                inline: false },\n          { name: \"Último registro\",value: first.timestamp || '-',            inline: false },\n        ],\n        footer: { text: \"Application Insights Alert\" }\n      });\n    }\n  }\n  return {\n    username: \"Application Insights\",\n    content: `@here ⚠️ **${total} errores detectados en los últimos 15 minutos**`,\n    embeds: embeds.slice(0, 10) // Discord permite máximo 10 embeds por mensaje\n  };\n}\n\nreturn [{\n  json: {\n    teams:       buildTeamsPayload(grouped, totalErrors),\n    discord:     buildDiscordPayload(grouped, totalErrors),\n    error_count: totalErrors,\n    skip:        false\n  }\n}];"
+            },
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                -240,
+                -192
+            ],
+            "id": "365b4b97-4677-40de-a216-b2f704109ac4",
+            "name": "Code in JavaScript"
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "https://api.applicationinsights.io/v1/apps/43118f99-4977-4c7c-9bbe-48213be849e3/query",
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "Authorization",
+                            "value": "=Bearer {{ $json.access_token }}"
+                        }
+                    ]
+                },
+                "sendBody": true,
+                "specifyBody": "json",
+                "jsonBody": "{\n    \"query\": \"exceptions | where timestamp > ago(15m) | order by cloud_RoleInstance asc, type asc\"\n}",
+                "options": {}
+            },
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.4,
+            "position": [
+                -464,
+                -192
+            ],
+            "id": "76964b82-4800-431f-9f85-289c3fddd684",
+            "name": "Application Insights Query"
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "https://discordapp.com/api/webhooks/1472995309964759234/_uUaWytHnXx8LmB33w4Dk4oHJHK0OtaqC7pjLAYVWy2MpUmXNKCTcqi5MZu8HKfBdSdh",
+                "sendBody": true,
+                "specifyBody": "json",
+                "jsonBody": "={{ $json.discord }}",
+                "options": {}
+            },
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.4,
+            "position": [
+                64,
+                -272
+            ],
+            "id": "1e6fae1f-ba56-4a40-af0c-dddf5b3fbf94",
+            "name": "Discord Webhook"
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "=https://login.microsoftonline.com/{{$env.AZURE_TENANT_ID}}/oauth2/v2.0/token",
+                "sendBody": true,
+                "contentType": "form-urlencoded",
+                "bodyParameters": {
+                    "parameters": [
+                        {
+                            "name": "grant_type",
+                            "value": "client_credentials"
+                        },
+                        {
+                            "name": "client_id",
+                            "value": "={{ $env.AZURE_CLIENT_ID }}"
+                        },
+                        {
+                            "name": "client_secret",
+                            "value": "={{ $env.AZURE_CLIENT_SECRET }}"
+                        },
+                        {
+                            "name": "scope",
+                            "value": "https://api.applicationinsights.io/.default"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.4,
+            "position": [
+                -688,
+                -192
+            ],
+            "id": "f88f7105-762c-4ca8-a44c-cad3700f5f96",
+            "name": "HTTP Request"
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "https://default4a1bc6bc95d44183a2a2baabf61a43.2b.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/23a792c2852244d2827aed28070ddfa3/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=1sgaGiCPfWvF-ANo2ZONXqPoMARVfBUx5JZ7EogQMy8",
+                "sendBody": true,
+                "specifyBody": "json",
+                "jsonBody": "={{ $json.teams }}",
+                "options": {}
+            },
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.4,
+            "position": [
+                64,
+                -64
+            ],
+            "id": "8fb83e88-69bd-4ea7-8d67-12f20343a41b",
+            "name": "Teams Webhook"
+        }
+    ],
+    "connections": {
+        "When clicking ‘Execute workflow’": {
+            "main": [
+                [
+                    {
+                        "node": "HTTP Request",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Code in Python": {
+            "main": [
+                []
+            ]
+        },
+        "Code in JavaScript": {
+            "main": [
+                [
+                    {
+                        "node": "Teams Webhook",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Application Insights Query": {
+            "main": [
+                [
+                    {
+                        "node": "Code in JavaScript",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "HTTP Request": {
+            "main": [
+                [
+                    {
+                        "node": "Application Insights Query",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    }
+}

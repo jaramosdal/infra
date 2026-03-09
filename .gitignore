@@ -22,3 +22,9 @@ Thumbs.db
 .vscode/
 .idea/
 *.log
+
+# === Archivos de Python ===
+__pycache__/
+*.pyc
+.pytest_cache/
+.coverage

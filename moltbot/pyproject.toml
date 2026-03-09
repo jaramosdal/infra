@@ -11,11 +11,15 @@ dependencies = [
     "pika",
     "psycopg2-binary",
     "requests",
+    "sentry-sdk",
 ]
 
 [project.optional-dependencies]
 dev = [
     "pytest>=8.0",
+    "pytest-mock>=3.12",
+    "pytest-cov>=4.1",
+    "responses>=0.25",
     "ruff",
 ]
 
@@ -24,6 +28,20 @@ moltbot = "moltbot.app:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/moltbot"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "integration: tests que requieren servicios externos (DB, RabbitMQ)",
+]
+addopts = "-ra --strict-markers"
+
+[tool.coverage.run]
+source = ["moltbot"]
+
+[tool.coverage.report]
+show_missing = true
+skip_empty = true
 
 [tool.ruff]
 target-version = "py311"
